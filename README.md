@@ -17,6 +17,7 @@ Configuration
 
 Create a yaml-file somewhere (lets call it example.com.yaml):
 
+```yaml
 	hosts:
 		host-1:
 			- 1.2.3.4
@@ -34,7 +35,7 @@ Create a yaml-file somewhere (lets call it example.com.yaml):
 		- check_http:
 		  	vhost: "www.example.com"
 			url: "/"
-
+```
 
 Then run the following command:
 
