@@ -18,23 +18,23 @@ Configuration
 Create a yaml-file somewhere (lets call it example.com.yaml):
 
 ```yaml
-	hosts:
-		host-1:
-			- 1.2.3.4
-		host-2:
-			- 1.2.3.5
-			- 1.2.4.1
-	aliases:
-	   	- www
-	labels:
-		- host-1
-			- north-america
-		- host-2
-			- europe
-	checks:
-		- check_http:
-		  	vhost: "www.example.com"
-			url: "/"
+hosts:
+	host-1:
+		- 1.2.3.4
+	host-2:
+		- 1.2.3.5
+		- 1.2.4.1
+aliases:
+	- www
+labels:
+	- host-1
+		- north-america
+	- host-2
+		- europe
+checks:
+	- check_http:
+		  vhost: "www.example.com"
+		url: "/"
 ```
 
 Then run the following command:
