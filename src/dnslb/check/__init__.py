@@ -1,4 +1,4 @@
-import httplib
+import httplib,xmpp
 from ..exceptions import MonitorException
 import logging
 
@@ -22,3 +22,15 @@ def check_http(host, vhost=None, url=None, match=None):
     else:
         return True
 
+
+def check_xmpp(host, port=5222, jid=None, password=None):
+    logging.debug("XMPP connection to %s" % host)
+    jID = xmpp.protocol.JID(jid)
+    cl = xmpp.Client((host, port), debug=[])
+    connection = cl.connect()
+    if not connection:
+        raise MonitorException("Unable to connect to %s" % host)
+    auth = cl.auth(jID.getNode(), password, jID.getResource())
+    if not auth:
+        raise MonitorException("Authentication failed")
+    return True
