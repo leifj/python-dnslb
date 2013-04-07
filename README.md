@@ -12,6 +12,7 @@ Installation
 	pip install python-dlslb
 
 or 
+
 	git clone https://github.com/leifj/python-dnslb
 	cd python-dnslb
 	./setup.py install
