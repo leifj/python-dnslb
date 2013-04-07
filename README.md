@@ -13,7 +13,7 @@ Installation
 
 or 
 
-	git clone https://github.com/leifj/python-dnslb
+	git clone git@github.com:leifj/python-dnslb.git
 	cd python-dnslb
 	./setup.py install
 
