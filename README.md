@@ -9,6 +9,9 @@ as a poor-mans "global dns load balancer".
 Installation
 ------------
 
+As alwasy, setting up a virtualenv might be a good idea but other than that do the usual, 
+i.e in this case:
+
 	pip install python-dlslb
 
 or 
