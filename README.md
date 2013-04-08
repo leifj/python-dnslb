@@ -37,13 +37,16 @@ hosts:
 	host-2:
 		- 1.2.3.5
 		- 1.2.4.1
+	host-3
+		- 4.3.2.1
 aliases:
 	- www
 labels:
-	- host-1
-		- north-america
-	- host-2
-		- europe
+	- north-america
+		- host-1
+	- europe
+		- host-2
+		- host-3
 checks:
 	- check_http:
 		  vhost: "www.example.com"

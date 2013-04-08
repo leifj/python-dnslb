@@ -8,6 +8,14 @@ NEWS
 
 * Initial release
 
+0.2.1
+-----
+
+*Release Date: Mon Apr  8 12:49:06 CEST 2013*
+
+* Fixes label handling
+
+
 0.3dev
 ------
 *Release Date: UNRELEASED*
