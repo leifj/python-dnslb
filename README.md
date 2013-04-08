@@ -27,6 +27,10 @@ Running
 Create a yaml-file somewhere (lets call it example.com.yaml):
 
 ```yaml
+contact: hostmaster.example.com
+nameservers:
+    - ns1.example.com
+    - ns2.example.com
 hosts:
 	host-1:
 		- 1.2.3.4

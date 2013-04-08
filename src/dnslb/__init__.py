@@ -6,9 +6,10 @@ import json
 import logging
 import os
 from random import random
+import re
 import tempfile
 from threading import Thread
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from time import sleep, gmtime, strftime
 import traceback
 import sys
@@ -42,7 +43,8 @@ class Node(object):
 class Monitor(Thread):
     def __init__(self, hosts, mult=2, timeout=10, sleep_time=1):
         super(Monitor, self).__init__()
-        self.num_workers = mult * len(hosts)
+        self.num_hosts = len(hosts)
+        self.num_workers = mult * self.size
         self.pool = ThreadPool(self.num_workers)
         self.nodes = {}
         for host in hosts:
@@ -55,6 +57,7 @@ class Monitor(Thread):
         self.num_started = 0
         self.num_fail = 0
         self.num_ok = 0
+        self.num_flipped = 0
         self.start()
 
     def ok(self, hostname):
@@ -63,6 +66,13 @@ class Monitor(Thread):
     @property
     def num_processed(self):
         return self.num_ok + self.num_fail
+
+    @property
+    def size(self):
+        return self.num_hosts
+
+    def reset_flipped(self):
+        self.num_flipped = 0
 
     def __str__(self):
         return "<Monitor " + ",".join(["%s" % n for n in self.nodes.values()]) + ">"
@@ -75,9 +85,13 @@ class Monitor(Thread):
             node = self.nodes[hostname]
             if res:
                 self.num_ok += 1
+                if not self.ok(hostname):
+                    self.num_flipped += 1
                 node.add_status(True)
             else:
                 self.num_fail += 1
+                if self.ok(hostname):
+                    self.num_flipped += 1
                 node.add_status(False, "check failed")
         except Exception, ex:
             logging.warning(ex)
@@ -91,6 +105,8 @@ class Monitor(Thread):
             hostname = req.args[0]
             node = self.nodes[hostname]
             self.num_fail += 1
+            if self.ok(hostname):
+                self.num_flipped += 1
             node.add_status(False, "caught exception", exc_info)
         except Exception, ex:
             logging.warning(ex)
@@ -149,15 +165,15 @@ class Monitor(Thread):
         self.pool.dismissWorkers(self.num_workers, do_join=True)
         return True
 
-    def dns_zone(self, contact, nameservers, config):
+    def dns_zone(self, config):
         zone = dict()
         zone['ttl'] = 120
         zone['serial'] = int(strftime("%Y%M%d00", gmtime()))
-        zone['contact'] = contact
+        zone['contact'] = config['contact']
         zone['max_hosts'] = 2
 
         ns = dict()
-        for n in nameservers:
+        for n in config['nameservers']:
             ns[n] = None
         zone['data'] = {'': {'ns': ns}}
 
@@ -193,7 +209,7 @@ class Monitor(Thread):
         if len(vn_a['aaaa']) > 0:
             zone['data']['']['aaaa'] = vn_a['aaaa']
 
-        return json.dumps(zone)
+        return zone
 
 
 def safe_write(fn, data):
@@ -209,25 +225,48 @@ def safe_write(fn, data):
     except Exception, ex:
         logging.error(ex)
     finally:
-        if tmpn is not None:
+        if tmpn is not None and os.path.exists(tmpn):
             try:
                 os.unlink(tmpn)
-            except Exception:
+            except Exception, ex:
+                logging.warning(ex)
                 pass
     return False
 
 
+def _err(ec, msg):
+    print msg
+    print 'for help use --help'
+    sys.exit(ec)
+
+
+def tdelta(input):
+    """
+Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours and/or seconds.
+
+:param input: A human-friendly string representation of a timedelta
+    """
+    keys = ["weeks", "days", "hours", "minutes"]
+    regex = "".join(["((?P<%s>\d+)%s ?)?" % (k, k[0]) for k in keys])
+    kwargs = {}
+    for k, v in re.match(regex, input).groupdict(default="0").items():
+        kwargs[k] = int(v)
+    return timedelta(**kwargs)
+
+
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hz:c:', ['help', 'loglevel=', 'logfile=', 'zone', 'config'])
+        opts, args = getopt.getopt(sys.argv[1:], 'hz:c:M:A:',
+                                   ['help', 'loglevel=', 'logfile=', 'zone', 'config', 'max-changes', 'max-age'])
     except getopt.error, msg:
-        print msg
-        print 'for help use --help'
-        sys.exit(2)
+        _err(2, msg)
 
-    config_file = 'gdlb.yaml'
+    config_file = 'config.yaml'
     zone_file = 'zone.json'
+    loglevel = 'INFO'
     logfile = None
+    max_changes = 0
+    max_age = "PT1H"
     for o, a in opts:
         if o in ('-h', '--help'):
             print __doc__
@@ -242,6 +281,10 @@ def main():
             config_file = a
         elif o in ('--zone', '-z'):
             zone_file = a
+        elif o in ('--max-change', '-M'):
+            max_changes = a
+        elif o in ('--max-age', '-A'):
+            max_age = a
 
     log_args = {'level': loglevel}
     if logfile is not None:
@@ -249,23 +292,51 @@ def main():
     logging.basicConfig(**log_args)
 
     config = None
+    if not os.path.exists(config_file):
+        _err(1, "Configuration file does not exists: %s" % config_file)
+
     with open(config_file) as fd:
         config = yaml.safe_load(fd)
 
+    def _num_addrs(zone):
+        if zone is None:
+            return 0
+        if not 'data' in zone:
+            return 0
+        top = zone['data'].get('', None)
+        if top is None:
+            return 0
+        return len(top.get("a", [])) + len(top.get("aaaa", []))
+
+    max_age_delta = tdelta(max_age)
+
     mon = Monitor(list(chain.from_iterable(config['hosts'].values())), sleep_time=2)  # just monitor one address
+    if max_changes == 0:
+        max_changes = mon.size - 1
+
     while True:
         try:
+            zone = None
+            last_wrote_zone = datetime.now()
             for ch in config['checks']:
                 for check_name, kwargs in ch.iteritems():
                     mon.schedule(getattr(check, check_name), **kwargs)
-                s = int(random() * 10)
-                sleep(s)
+                sleep(10 * random())
 
-            if mon.num_processed > 0:
-                zone = mon.dns_zone('leifj.mnt.se', ['ns1', 'ns2'], config)
-                safe_write(zone_file, zone)
+            if mon.num_processed > mon.size:
+                new_zone = mon.dns_zone(config)
+
+                num_changes = _num_addrs(zone) - _num_addrs(new_zone)
+                if num_changes < max_changes or last_wrote_zone > datetime.now() + max_age_delta:
+                    zone = new_zone
+                    logging.info("writing zone with %d top level addresses" % _num_addrs(zone))
+                    safe_write(zone_file, json.dumps(zone))
+                    last_wrote_zone = datetime.now()
+                else:
+                    logging.info("too many changes (%d > %d) - holding off write" % (num_changes, max_changes))
 
             sleep(60 * random())
         except KeyboardInterrupt:
+            logging.info("Shutting down...")
             mon.halt()
             break
