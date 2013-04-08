@@ -166,6 +166,11 @@ class Monitor(Thread):
         return True
 
     def dns_zone(self, config):
+        """
+
+        :param config:
+        :return: :raise:
+        """
         zone = dict()
         zone['ttl'] = 120
         zone['serial'] = int(strftime("%Y%M%d00", gmtime()))
@@ -188,20 +193,23 @@ class Monitor(Thread):
         for v in config['aliases']:
             zone['data'][v] = dict(alias="")
 
-        vn_a = dict(a=[], aaaa=[])
+        for ln in config['labels'].keys():
+            zone['data'][ln] = dict(a=[], aaaa=[])
+
+        vn_a = dict(a=[],aaaa=[])
         for cn in config['hosts'].keys():
             zone['data'].setdefault(cn, {})
 
-            cn_a = dict(a=[], aaaa=[])
+            zone['data'][cn] = dict(a=[], aaaa=[])
             for ip in config['hosts'][cn]:
-                _add_addr(ip, cn_a)
+                _add_addr(ip, zone['data'][cn])
                 if self.ok(ip):
                     _add_addr(ip, vn_a)
+                    for ln in config['labels']:
+                        if cn in config['labels'][ln]:
+                            _add_addr(ip, zone['data'][ln])
                 else:
                     logging.warn("Excluding (%s) %s - not ok" % (cn, ip))
-            zone['data'][cn] = cn_a
-            for vn in config['labels'][cn]:
-                zone['data'][vn] = vn_a
 
         if len(vn_a['a']) > 0:
             zone['data']['']['a'] = vn_a['a']
@@ -240,16 +248,16 @@ def _err(ec, msg):
     sys.exit(ec)
 
 
-def tdelta(str):
+def tdelta(delta_str):
     """
 Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours and/or seconds.
 
-:param str: A human-friendly string representation of a timedelta
+:param delta_str: A human-friendly string representation of a timedelta
     """
     keys = ["weeks", "days", "hours", "minutes"]
     regex = "".join(["((?P<%s>\d+)%s ?)?" % (k, k[0]) for k in keys])
     kwargs = {}
-    for k, v in re.match(regex, str).groupdict(default="0").items():
+    for k, v in re.match(regex, delta_str).groupdict(default="0").items():
         kwargs[k] = int(v)
     return timedelta(**kwargs)
 
