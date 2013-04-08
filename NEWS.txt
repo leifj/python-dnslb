@@ -7,3 +7,7 @@ NEWS
 *Release Date: Mon Apr  8 12:49:06 CEST 2013*
 
 * Initial release
+
+0.2dev
+------
+*Release Date: UNRELEASED*
