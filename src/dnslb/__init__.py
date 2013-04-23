@@ -1,3 +1,19 @@
+"""
+
+Usage: dnslb [options]
+        --help                      This message
+        --loglevel=<level>          Set loglevel to <level>
+        --logfile=<file>            Log into <file>
+        --zone=<zonefile>           Write JSON zonefile into <zonefile>
+        --config=<config>           Read config (yaml) from <config>
+        --max-changes=<number>      Distrust a zone that contains more than this number of changes
+        --max-age=<seconds>         Force update a zone that is older than this # of seconds
+
+The dnslb runs a set of periodic tests a set of services listed in config and produces a JSON-based
+zonefile that can be consumed by geodns.
+
+"""
+
 import Queue
 from collections import deque
 import getopt
@@ -9,11 +25,11 @@ from random import random
 import re
 import tempfile
 from threading import Thread
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from time import sleep, gmtime, strftime
 import traceback
 import sys
-from threadpool import ThreadPool, NoResultsPending, WorkRequest, NoWorkersAvailable
+from threadpool import ThreadPool, NoResultsPending, WorkRequest
 import yaml
 from dnslb.check import check_http
 
@@ -196,7 +212,7 @@ class Monitor(Thread):
         for ln in config['labels'].keys():
             zone['data'][ln] = dict(a=[], aaaa=[])
 
-        vn_a = dict(a=[],aaaa=[])
+        vn_a = dict(a=[], aaaa=[])
         for cn in config['hosts'].keys():
             zone['data'].setdefault(cn, {})
 
