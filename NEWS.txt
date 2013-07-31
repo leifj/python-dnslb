@@ -20,3 +20,8 @@ NEWS
 *Release Date: Wed Jul 31 13:59:43 CEST 2013*
 
 * Conditionally export check_* depending on imports
+
+0.2.3
+-----
+* Release Date: UNRELEASED*
+

@@ -7,7 +7,7 @@ README = open(os.path.join(here, 'README.md')).read()
 NEWS = open(os.path.join(here, 'NEWS.txt')).read()
 
 
-version = '0.2.2'
+version = '0.2.3dev'
 
 install_requires = [
     'threadpool',
