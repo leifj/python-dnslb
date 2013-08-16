@@ -28,3 +28,6 @@ NEWS
 * better logging
 * email notification (beta)
 
+0.2.4
+-----
+* Release Date: UNRELEASED*
