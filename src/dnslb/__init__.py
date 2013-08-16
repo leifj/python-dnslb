@@ -8,7 +8,8 @@ Usage: dnslb [options]
         --config=<config>           Read config (yaml) from <config>
         --max-changes=<number>      Distrust a zone that contains more than this number of changes
         --max-age=<seconds>         Force update a zone that is older than this # of seconds
-
+        --mail=<email>              Send change notifications to this email address
+        --sender=<from email>       Send change notifications from this email address (requires --mail)
 The dnslb runs a set of periodic tests a set of services listed in config and produces a JSON-based
 zonefile that can be consumed by geodns.
 
@@ -16,6 +17,7 @@ zonefile that can be consumed by geodns.
 
 import Queue
 from collections import deque
+from email.mime.text import MIMEText
 import getopt
 from itertools import chain
 import json
@@ -23,6 +25,7 @@ import logging
 import os
 from random import random
 import re
+import smtplib
 import tempfile
 from threading import Thread
 from datetime import datetime, timedelta
@@ -55,9 +58,38 @@ class Node(object):
         else:
             return self.status[0][1]
 
+    @property
+    def last_error(self):
+        if self.ok:
+            return "no error"
+        else:
+            return "%s %s" % (self.status[0][2], self.status[0][3])
+
+    @property
+    def died(self):
+        if not self.status:
+            return False
+        elif len(self.status) < 2:
+            return False
+        else:
+            return not self.status[0][1] and self.status[1][1]
+
+    @property
+    def recovered(self):
+        if not self.status:
+            return False
+        elif len(self.status) < 2:
+            return False
+        else:
+            return self.status[0][1] and not self.status[1][1]
+
+
+def notify_log(hostname, before, after, info=""):
+    logging.info("%s flipped from %s to %s (%s)" % (hostname, before, after, info))
+
 
 class Monitor(Thread):
-    def __init__(self, hosts, mult=2, timeout=10, sleep_time=1):
+    def __init__(self, hosts, mult=2, timeout=10, sleep_time=1, notify=notify_log):
         super(Monitor, self).__init__()
         self.num_hosts = len(hosts)
         self.num_workers = mult * self.size
@@ -74,10 +106,14 @@ class Monitor(Thread):
         self.num_fail = 0
         self.num_ok = 0
         self.num_flipped = 0
+        self.notify = notify
         self.start()
 
     def ok(self, hostname):
         return self.nodes[hostname].ok
+
+    def last_error(self, hostname):
+        return self.nodes[hostname].last_error
 
     @property
     def num_processed(self):
@@ -102,11 +138,13 @@ class Monitor(Thread):
             if res:
                 self.num_ok += 1
                 if not self.ok(hostname):
+                    self.notify(hostname, False, True)
                     self.num_flipped += 1
                 node.add_status(True)
             else:
                 self.num_fail += 1
                 if self.ok(hostname):
+                    self.notify(hostname, True, False, res)
                     self.num_flipped += 1
                 node.add_status(False, "check failed")
         except Exception, ex:
@@ -117,11 +155,12 @@ class Monitor(Thread):
         try:
             self.remaining -= 1
             logging.debug("_test_fail %s" % repr(req))
-            traceback.print_exception(*exc_info)
+            # traceback.print_exception(*exc_info)
             hostname = req.args[0]
             node = self.nodes[hostname]
             self.num_fail += 1
             if self.ok(hostname):
+                self.notify(hostname, True, False, exc_info)
                 self.num_flipped += 1
             node.add_status(False, "caught exception", exc_info)
         except Exception, ex:
@@ -225,7 +264,7 @@ class Monitor(Thread):
                         if cn in config['labels'][ln]:
                             _add_addr(ip, zone['data'][ln])
                 else:
-                    logging.warn("Excluding (%s) %s - not ok" % (cn, ip))
+                    logging.warn("Excluding (%s) %s - not ok: %s" % (cn, ip, self.last_error(ip)))
 
         if len(vn_a['a']) > 0:
             zone['data']['']['a'] = vn_a['a']
@@ -278,10 +317,39 @@ Parse a time delta from expressions like 1w 32d 4h 5s - i.e in weeks, days hours
     return timedelta(**kwargs)
 
 
+def notify_email(email, frm, hostname, before, after, info=""):
+    """
+Send notification about dnslb zone changes using email
+
+    :param email: destination email
+    :param frm: sender email
+    :param hostname: the name of the host
+    :param before: status before change (True,False)
+    :param after: status after change (True,False)
+    :param info: Extra information to include
+    """
+    msg = MIMEText("""
+
+The host % flipped from %s to %s
+
+%s
+""" % (hostname, before, after, info))
+    tag = ""
+    if not after:
+        tag = " WARNING "
+    msg['Subject'] = "[dnslb] %s%s: %s" % (hostname, tag, after)
+    msg['From'] = frm
+    msg['To'] = email
+    s = smtplib.SMTP('localhost')
+    s.sendmail(frm, [email], msg.as_string())
+    s.quit()
+
+
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hz:c:M:A:',
-                                   ['help', 'loglevel=', 'logfile=', 'zone', 'config', 'max-changes', 'max-age'])
+        opts, args = getopt.getopt(sys.argv[1:], 'hz:c:M:A:m:S:',
+                                   ['help', 'loglevel=', 'logfile=', 'zone=', 'config=', 'max-changes=', 'max-age=',
+                                    'mail=', 'sender='])
     except getopt.error, msg:
         _err(2, msg)
 
@@ -291,6 +359,8 @@ def main():
     logfile = None
     max_changes = 0
     max_age = "PT1H"
+    email = None
+    sender = 'noreply@localhost.localdomain'
     for o, a in opts:
         if o in ('-h', '--help'):
             print __doc__
@@ -309,10 +379,15 @@ def main():
             max_changes = a
         elif o in ('--max-age', '-A'):
             max_age = a
+        elif o in ('--mail', '-m'):
+            email = a
+        elif o in ('--sender', '-S'):
+            sender = a
 
     log_args = {'level': loglevel}
     if logfile is not None:
         log_args['filename'] = logfile
+    log_args['format'] = '%(asctime)s %(message)s'
     logging.basicConfig(**log_args)
 
     config = None
@@ -332,9 +407,14 @@ def main():
             return 0
         return len(top.get("a", [])) + len(top.get("aaaa", []))
 
+    if email is not None and sender is not None:
+        _notify = lambda hostname, before, after, info: notify_email(email, sender, hostname, before, after, info)
+    else:
+        _notify = notify_log
+
     max_age_delta = tdelta(max_age)
 
-    mon = Monitor(list(chain.from_iterable(config['hosts'].values())), sleep_time=2)  # just monitor one address
+    mon = Monitor(list(chain.from_iterable(config['hosts'].values())), sleep_time=2, notify=_notify)
     if max_changes == 0:
         max_changes = mon.size - 1
 
