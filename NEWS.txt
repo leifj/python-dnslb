@@ -23,5 +23,8 @@ NEWS
 
 0.2.3
 -----
-* Release Date: UNRELEASED*
+* Release Date: Fri Aug 16 10:19:08 CEST 2013*
+
+* better logging
+* email notification (beta)
 
