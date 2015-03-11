@@ -10,6 +10,7 @@ Usage: dnslb [options]
         --max-age=<seconds>         Force update a zone that is older than this # of seconds
         --mail=<email>              Send change notifications to this email address
         --sender=<from email>       Send change notifications from this email address (requires --mail)
+        --sleep-time=<seconds>      Number of seconds to sleep between probes
 
 The dnslb runs a set of periodic tests a set of services listed in config and produces a JSON-based
 zonefile that can be consumed by geodns.
@@ -90,7 +91,7 @@ def notify_log(hostname, before, after, info=""):
 
 
 class Monitor(Thread):
-    def __init__(self, hosts, mult=2, timeout=10, sleep_time=1, notify=notify_log):
+    def __init__(self, hosts, mult=2, timeout=10, sleep_time=30, notify=notify_log):
         super(Monitor, self).__init__()
         self.num_hosts = len(hosts)
         self.num_workers = mult * self.size
@@ -348,9 +349,9 @@ The host % flipped from %s to %s
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hz:c:M:A:m:S:',
+        opts, args = getopt.getopt(sys.argv[1:], 'hz:c:M:A:m:S:s:',
                                    ['help', 'loglevel=', 'logfile=', 'zone=', 'config=', 'max-changes=', 'max-age=',
-                                    'mail=', 'sender='])
+                                    'mail=', 'sender=', 'sleep-time='])
     except getopt.error, msg:
         _err(2, msg)
 
@@ -362,6 +363,7 @@ def main():
     max_age = "PT1H"
     email = None
     sender = 'noreply@localhost.localdomain'
+    sleep_time = 30
     for o, a in opts:
         if o in ('-h', '--help'):
             print __doc__
@@ -384,6 +386,8 @@ def main():
             email = a
         elif o in ('--sender', '-S'):
             sender = a
+        elif o in ('--sleep-time','-s'):
+            sleep_time = int(a)
 
     log_args = {'level': loglevel}
     if logfile is not None:
@@ -415,7 +419,7 @@ def main():
 
     max_age_delta = tdelta(max_age)
 
-    mon = Monitor(list(chain.from_iterable(config['hosts'].values())), sleep_time=2, notify=_notify)
+    mon = Monitor(list(chain.from_iterable(config['hosts'].values())), sleep_time=sleep_time, notify=_notify)
     if max_changes == 0:
         max_changes = mon.size - 1
 
