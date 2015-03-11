@@ -200,6 +200,7 @@ class Monitor(Thread):
         logging.info("Starting up!"
                      "")
         while self.running:
+            logging.debug("in loop...")
             try:
                 if self.stop:
                     logging.debug("waiting for all %d remaining tasks..." % self.remaining)
@@ -208,7 +209,7 @@ class Monitor(Thread):
                     if self.remaining == 0:
                         self.running = False
                 else:
-                    self.pool.poll(block=False)
+                    self.pool.poll(block=True)
             except KeyboardInterrupt:
                 logging.info("Shutting down...")
                 self.stop = True
