@@ -10,6 +10,7 @@ Usage: dnslb [options]
         --max-age=<seconds>         Force update a zone that is older than this # of seconds
         --mail=<email>              Send change notifications to this email address
         --sender=<from email>       Send change notifications from this email address (requires --mail)
+
 The dnslb runs a set of periodic tests a set of services listed in config and produces a JSON-based
 zonefile that can be consumed by geodns.
 
@@ -30,11 +31,9 @@ import tempfile
 from threading import Thread
 from datetime import datetime, timedelta
 from time import sleep, gmtime, strftime
-import traceback
 import sys
 from threadpool import ThreadPool, NoResultsPending, WorkRequest
 import yaml
-from dnslb.check import check_http
 
 
 __author__ = 'leifj'
@@ -62,8 +61,10 @@ class Node(object):
     def last_error(self):
         if self.ok:
             return "no error"
-        else:
+        elif len(self.status) > 0:
             return "%s %s" % (self.status[0][2], self.status[0][3])
+        else:
+            return repr(self.status)
 
     @property
     def died(self):
@@ -417,6 +418,8 @@ def main():
     mon = Monitor(list(chain.from_iterable(config['hosts'].values())), sleep_time=2, notify=_notify)
     if max_changes == 0:
         max_changes = mon.size - 1
+
+    import check # must be imported after logging setup
 
     while True:
         try:
