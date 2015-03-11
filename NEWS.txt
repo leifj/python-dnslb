@@ -31,3 +31,9 @@ NEWS
 0.2.4
 -----
 * Release Date: Wed Mar 11 22:39:49 CET 2015*
+
+0.2.5
+-----
+* Release Date: Wed Mar 11 22:39:49 CET 2015*
+
+* sleep configuration
