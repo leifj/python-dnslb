@@ -5,8 +5,6 @@ __author__ = 'leifj'
 
 
 def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=None):
-    import pdb
-    pdb.set_trace()
     if use_tls:
         if port is None:
             port = 443
