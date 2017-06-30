@@ -5,11 +5,13 @@ __author__ = 'leifj'
 
 
 def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=None):
+    import pdb
+    pdb.set_trace()
     if use_tls:
         if port is None:
             port = 443
         logging.debug("HTTPS connection to %s" % host)
-        h = httplib.HTTPSConnection("{0}:{1}".format(host,port), context=ssl._create_unverified_context())
+        h = httplib.HTTPSConnection("{0}:{1}".format(host,port))
     else:
         if port is None:
             port = 80
