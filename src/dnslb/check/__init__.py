@@ -8,8 +8,8 @@ def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=None
     if use_tls:
         if port is None:
             port = 443
-        logging.debug("HTTPS connection to %s:%d" % (host,port))
-        h = httplib.HTTPSConnection("{0}:{1}".format(host,port), context=ssl._create_unverified_context())
+        logging.debug("HTTPS connection to %s" % host)
+        h = httplib.HTTPSConnection("{0}:{1}".format(host,port))
     else:
         if port is None:
             port = 80
