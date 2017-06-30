@@ -433,7 +433,7 @@ def main():
             for ch in config['checks']:
                 for check_name, kwargs in ch.iteritems():
                     mon.schedule(getattr(check, check_name), **kwargs)
-                sleep(10 * random())
+                    sleep(int(sleep_time * random()))
 
             if mon.num_processed > mon.size:
                 new_zone = mon.dns_zone(config)
@@ -447,7 +447,7 @@ def main():
                 else:
                     logging.info("too many changes (%d > %d) - holding off write" % (num_changes, max_changes))
 
-            sleep(60 * random())
+            sleep(sleep_time * random())
         except KeyboardInterrupt:
             logging.info("Shutting down...")
             mon.halt()
