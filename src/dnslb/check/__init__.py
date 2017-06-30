@@ -4,12 +4,15 @@ import logging
 __author__ = 'leifj'
 
 
-def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=80):
+def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=None):
     if use_tls:
-        port = 443
+        if port is None:
+            port = 443
         logging.debug("HTTPS connection to %s" % host)
         h = httplib.HTTPSConnection("{0}:{1}".format(host,port), context=ssl._create_unverified_context())
     else:
+        if port is None:
+            port = 80
         logging.debug("HTTP connection to %s" % host)
         h = httplib.HTTPConnection("{0}:{1}".format(host,port))
     logging.debug("GET %s (vhost=%s)" % (url, vhost))
