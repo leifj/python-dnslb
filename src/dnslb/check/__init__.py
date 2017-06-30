@@ -8,17 +8,17 @@ def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=None
     if use_tls:
         if port is None:
             port = 443
-        logging.debug("HTTPS connection to %s" % host)
+        logging.debug("HTTPS connection to %s:%d" % (host,port))
         h = httplib.HTTPSConnection("{0}:{1}".format(host,port), context=ssl._create_unverified_context())
     else:
         if port is None:
             port = 80
-        logging.debug("HTTP connection to %s" % host)
+        logging.debug("HTTP connection to %s:%d" % (host,port))
         h = httplib.HTTPConnection("{0}:{1}".format(host,port))
     logging.debug("GET %s (vhost=%s)" % (url, vhost))
     h.request('GET', url, "", {'Host': vhost})
     resp = h.getresponse()
-    logging.debug(resp.msg)
+    logging.debug("%d - %s" % (resp.status,resp.msg))
     if not resp.status == 200:
         raise MonitorException("%d %s" % (resp.status, resp.reason))
 
