@@ -31,7 +31,6 @@ def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=None
 
 check_http = None
 try: 
-    import ssl
     import httplib
     check_http = _check_http
 except ImportError:
