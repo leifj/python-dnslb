@@ -1,12 +1,12 @@
 from ..exceptions import MonitorException
 import logging
-import ssl
 
 __author__ = 'leifj'
 
 
 def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=80):
     if use_tls:
+        port = 443
         logging.debug("HTTPS connection to %s" % host)
         h = httplib.HTTPSConnection("{0}:{1}".format(host,port), context=ssl._create_unverified_context())
     else:
@@ -28,6 +28,7 @@ def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=80):
 
 check_http = None
 try: 
+    import ssl
     import httplib
     check_http = _check_http
 except ImportError:
