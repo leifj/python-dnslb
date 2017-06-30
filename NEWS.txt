@@ -35,5 +35,10 @@ NEWS
 0.2.5
 -----
 * Release Date: Wed Mar 11 22:39:49 CET 2015*
-
 * sleep configuration
+
+0.2.8
+-----
+* Release Date: Fre 30 jun 2017 18:07:14 CEST
+* check https urls
+
