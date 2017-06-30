@@ -1,12 +1,17 @@
 from ..exceptions import MonitorException
 import logging
+import ssl
 
 __author__ = 'leifj'
 
 
-def _check_http(host, vhost=None, url=None, match=None):
-    logging.debug("HTTP connection to %s" % host)
-    h = httplib.HTTPConnection(host)
+def _check_http(host, vhost=None, url=None, match=None, use_tls=False, port=80):
+    if use_tls:
+        logging.debug("HTTPS connection to %s" % host)
+        h = httplib.HTTPSConnection("{0}:{1}".format(host,port), context=ssl._create_unverified_context())
+    else:
+        logging.debug("HTTP connection to %s" % host)
+        h = httplib.HTTPConnection("{0}:{1}".format(host,port))
     logging.debug("GET %s (vhost=%s)" % (url, vhost))
     h.request('GET', url, "", {'Host': vhost})
     resp = h.getresponse()
