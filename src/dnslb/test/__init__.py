@@ -18,12 +18,12 @@ class TestConnect(TestCase):
         print mon
         assert (mon.ok("ac-sunet-1.nordu.net") or mon.ok("ac-sunet-2.nordu.net"))
 
-    def testEarlyShutdown(self):
-        mon = Monitor(['ac-sunet-1.nordu.net', 'ac-sunet-2.nordu.net'])
-        mon.schedule(check_http, vhost="connect.sunet.se", url="/_lvs.txt", match="connect")
-        mon.schedule(check_http, vhost="connect.sunet.se", url="/_lvs.txt", match="connect")
-        mon.halt()
-        assert (not mon.ok("ac-sunet-1.nordu.net") or not mon.ok("ac-sunet-2.nordu.net"))
+    #def testEarlyShutdown(self):
+    #    mon = Monitor(['ac-sunet-1.nordu.net', 'ac-sunet-2.nordu.net'])
+    #    mon.schedule(check_http, vhost="connect.sunet.se", url="/_lvs.txt", match="connect")
+    #    mon.schedule(check_http, vhost="connect.sunet.se", url="/_lvs.txt", match="connect")
+    #    mon.halt()
+    #    assert (not mon.ok("ac-sunet-1.nordu.net") or not mon.ok("ac-sunet-2.nordu.net"))
 
     def testConnectHttps(self):
         mon = Monitor(['www.ietf.org'])
