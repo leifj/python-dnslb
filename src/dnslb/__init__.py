@@ -256,7 +256,7 @@ class Monitor(Thread):
         for ln in config['labels'].keys():
             zone['data'][ln] = dict(a=[], aaaa=[])
 
-        zone['data'][''] = dict(a=[], aaaa=[])
+        zone['data'][''] |= dict(a=[], aaaa=[])
         for cn in config['hosts'].keys():
             zone['data'][cn] = dict(a=[], aaaa=[])
 
