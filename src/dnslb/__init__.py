@@ -240,11 +240,14 @@ class Monitor(Thread):
             ns[n] = None
         zone['data'] = {'': {'ns': ns}}
 
-        def _add_addr(ip, cn_a):
+        def _add_addr(ip, weight, cn_a):
+            logging.info(f"ip: {ip}, weight: {weight}")
+            if not weight:
+                weight = 100
             if '.' in ip:
-                cn_a['a'].append([ip, "100"])
+                cn_a['a'].append([ip, f"{weight}"])
             elif ':' in ip:
-                cn_a['aaaa'].append([ip, "100"])
+                cn_a['aaaa'].append([ip, f"{weight}"])
             else:
                 raise Exception("Unknown address format %s" % ip)
 
@@ -254,26 +257,25 @@ class Monitor(Thread):
         for ln in config['labels'].keys():
             zone['data'][ln] = dict(a=[], aaaa=[])
 
-        vn_a = dict(a=[], aaaa=[])
+        zone['data'][''] = dict(a=[], aaaa=[])
         for cn in config['hosts'].keys():
-            zone['data'].setdefault(cn, {})
-
             zone['data'][cn] = dict(a=[], aaaa=[])
+
             for ip in config['hosts'][cn]:
-                _add_addr(ip, zone['data'][cn])
+                _add_addr(ip, 100, zone['data'][cn])
                 if self.ok(ip):
-                    _add_addr(ip, vn_a)
+                    if config.get('default'):
+                        if cn in config['default']:
+                            weight = config['default'].get(cn, 'foobar')
+                            _add_addr(ip, weight, zone['data'][''])
+                    else:
+                        _add_addr(ip, 100, zone['data'][''])
                     for ln in config['labels']:
                         if cn in config['labels'][ln]:
-                            _add_addr(ip, zone['data'][ln])
+                            weight = config['labels'][ln][cn]
+                            _add_addr(ip, weight, zone['data'][ln])
                 else:
                     logging.warn("Excluding (%s) %s - not ok: %s" % (cn, ip, self.last_error(ip)))
-
-        if len(vn_a['a']) > 0:
-            zone['data']['']['a'] = vn_a['a']
-
-        if len(vn_a['aaaa']) > 0:
-            zone['data']['']['aaaa'] = vn_a['aaaa']
 
         return zone
 
