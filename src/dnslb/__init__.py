@@ -17,7 +17,7 @@ zonefile that can be consumed by geodns.
 
 """
 
-import Queue
+import queue
 from collections import deque
 from email.mime.text import MIMEText
 import getopt
@@ -149,7 +149,7 @@ class Monitor(Thread):
                     self.notify(hostname, True, False, res)
                     self.num_flipped += 1
                 node.add_status(False, "check failed")
-        except Exception, ex:
+        except Exception as ex:
             logging.warning(ex)
             pass
 
@@ -165,7 +165,7 @@ class Monitor(Thread):
                 self.notify(hostname, True, False, exc_info)
                 self.num_flipped += 1
             node.add_status(False, "caught exception", exc_info)
-        except Exception, ex:
+        except Exception as ex:
             logging.warning(ex)
             pass
 
@@ -181,7 +181,7 @@ class Monitor(Thread):
                 self.pool.putRequest(req, timeout=self.timeout)
                 self.num_started += 1
                 self.remaining += 1
-            except Queue.Full:
+            except queue.Full:
                 logging.warning("Unable to schedule service check for %s (queue full)." % node.hostname)
 
     def halt(self):
@@ -216,7 +216,7 @@ class Monitor(Thread):
             except NoResultsPending:
                 sleep(self.sleep_time)
                 pass
-            except Exception, ex:
+            except Exception as ex:
                 logging.error(ex)
         if self.stop:
             assert (self.remaining == 0)
@@ -288,21 +288,21 @@ def safe_write(fn, data):
         if os.path.exists(tmpn) and os.stat(tmpn).st_size > 0:
             os.rename(tmpn, fn)
             return True
-    except Exception, ex:
+    except Exception as ex:
         logging.error(ex)
     finally:
         if tmpn is not None and os.path.exists(tmpn):
             try:
                 os.unlink(tmpn)
-            except Exception, ex:
+            except Exception as ex:
                 logging.warning(ex)
                 pass
     return False
 
 
 def _err(ec, msg):
-    print msg
-    print 'for help use --help'
+    print(msg)
+    print('for help use --help')
     sys.exit(ec)
 
 
@@ -353,7 +353,7 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:], 'hz:c:M:A:m:S:s:',
                                    ['help', 'loglevel=', 'logfile=', 'zone=', 'config=', 'max-changes=', 'max-age=',
                                     'mail=', 'sender=', 'sleep-time='])
-    except getopt.error, msg:
+    except getopt.error as msg:
         _err(2, msg)
 
     config_file = 'config.yaml'
@@ -367,7 +367,7 @@ def main():
     sleep_time = 30
     for o, a in opts:
         if o in ('-h', '--help'):
-            print __doc__
+            print(__doc__)
             sys.exit(0)
         elif o in '--loglevel':
             loglevel = getattr(logging, a.upper(), None)
@@ -387,7 +387,7 @@ def main():
             email = a
         elif o in ('--sender', '-S'):
             sender = a
-        elif o in ('--sleep-time','-s'):
+        elif o in ('--sleep-time', '-s'):
             sleep_time = int(a)
 
     log_args = {'level': loglevel}
@@ -406,7 +406,7 @@ def main():
     def _num_addrs(zone):
         if zone is None:
             return 0
-        if not 'data' in zone:
+        if 'data' not in zone:
             return 0
         top = zone['data'].get('', None)
         if top is None:
@@ -424,14 +424,14 @@ def main():
     if max_changes == 0:
         max_changes = mon.size - 1
 
-    import check # must be imported after logging setup
+    import dnslb.check as check  # must be imported after logging setup
 
     while True:
         try:
             zone = None
             last_wrote_zone = datetime.now()
             for ch in config['checks']:
-                for check_name, kwargs in ch.iteritems():
+                for check_name, kwargs in ch.items():
                     mon.schedule(getattr(check, check_name), **kwargs)
                     sleep(int(sleep_time * random()))
 
