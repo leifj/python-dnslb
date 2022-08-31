@@ -241,7 +241,6 @@ class Monitor(Thread):
         zone['data'] = {'': {'ns': ns}}
 
         def _add_addr(ip, weight, cn_a):
-            logging.info(f"ip: {ip}, weight: {weight}")
             if not weight:
                 weight = 100
             if '.' in ip:
