@@ -9,12 +9,12 @@ as a poor-mans "global dns load balancer".
 Installation
 ------------
 
-As alwasy, setting up a virtualenv might be a good idea but other than that do the usual, 
+As alwasy, setting up a virtualenv might be a good idea but other than that do the usual,
 i.e in this case:
 
 	pip install python-dlslb
 
-or 
+or
 
 	git clone git@github.com:leifj/python-dnslb.git
 	cd python-dnslb
@@ -29,28 +29,31 @@ Create a yaml-file somewhere (lets call it example.com.yaml):
 ```yaml
 contact: hostmaster.example.com
 nameservers:
-    - ns1.example.com
-    - ns2.example.com
+  - ns1.example.com
+  - ns2.example.com
 hosts:
-	host-1:
-		- 1.2.3.4
-	host-2:
-		- 1.2.3.5
-		- 1.2.4.1
-	host-3
-		- 4.3.2.1
+  host-1:
+    - 1.2.3.4
+  host-2:
+    - 1.2.3.5
+    - ::1
+  host-3
+    - 4.3.2.1
 aliases:
-	- www
+  - www
+default:
+  host-1: 75
+  host-2:
 labels:
-	- north-america
-		- host-1
-	- europe
-		- host-2
-		- host-3
+  north-america
+    host-1:
+  europe:
+    host-2: 80
+    host-3: 40
 checks:
-	- check_http:
-		  vhost: "www.example.com"
-		url: "/"
+  - check_http:
+      vhost: "www.example.com"
+      url: "/"
 ```
 
 Then run the following command:
@@ -63,6 +66,9 @@ Periodically the monitor will write a json zonefile to example.com.json. The zon
 will always list A and AAAA recoreds for the hosts but will only list A and AAAA for
 the zone (example.com in our case) and for each label for those addresses that passes
 the test (check_http in this case).
+The default key defines what host (addresses) will be added to the default, if not
+specified, all addresses will be added.
+If a weight (:weight) is specified, the host addresses will be added using that weight.
+otherwise the default weigh of "100" will be used.
 
 The zonefile can be fed directly into geodns.
-
