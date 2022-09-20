@@ -265,7 +265,7 @@ class Monitor(Thread):
                 if self.ok(ip):
                     if config.get('default'):
                         if cn in config['default']:
-                            weight = config['default'].get(cn, 'foobar')
+                            weight = config['default'].get(cn, 100)
                             _add_addr(ip, weight, zone['data'][''])
                     else:
                         _add_addr(ip, 100, zone['data'][''])
