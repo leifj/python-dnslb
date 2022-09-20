@@ -1,9 +1,6 @@
-from random import random
 from unittest import TestCase
-import time
 from dnslb import Monitor
 from dnslb.check import check_http
-import logging
 
 __author__ = 'leifj'
 
@@ -15,7 +12,7 @@ class TestConnect(TestCase):
         mon.schedule(check_http, vhost="connect.sunet.se", url="/_lvs.txt", match="connect")
         mon.schedule(check_http, vhost="connect.sunet.se", url="/_lvs.txt", match="connect")
         mon.shutdown()
-        print mon
+        print(mon)
         assert (mon.ok("ac-sunet-1.nordu.net") or mon.ok("ac-sunet-2.nordu.net"))
 
     #def testEarlyShutdown(self):
@@ -29,5 +26,5 @@ class TestConnect(TestCase):
         mon = Monitor(['www.ietf.org'])
         mon.schedule(check_http, vhost="www.ietf.org", url="/", match="IETF", use_tls=True)
         mon.shutdown()
-        print mon
+        print(mon)
         assert (mon.ok("www.ietf.org"))
